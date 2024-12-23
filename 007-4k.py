@@ -4,10 +4,10 @@ import random
 import time
 for _ in range(0,10):
     # Constants
-    WIDTH, HEIGHT = 3840, 2160
+    WIDTH, HEIGHT = 1920, 1080
     FPS = 60
     DURATION = 60*60  # seconds
-    NUM_CUBES = 4000
+    NUM_CUBES = 1400
     OUTPUT_FILE = 'falling_boxes'+str(round(time.time()))+'.mp4'
 
     # Cube properties
