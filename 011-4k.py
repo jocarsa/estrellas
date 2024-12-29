@@ -6,11 +6,11 @@ from multiprocessing.pool import ThreadPool
 
 for _ in range(0,20):
     # Constants
-    WIDTH, HEIGHT = 1920, 1080
+    WIDTH, HEIGHT = 3840, 2160
     FPS = 60
     DURATION = 60*60  # seconds
-    NUM_CUBES = random.randint(200,2000)
-    OUTPUT_FILE = 'falling_boxes_' + str(round(time.time())) + '.mp4'
+    NUM_CUBES = random.randint(500,5000)
+    OUTPUT_FILE = 'starfield_screensaver_' + str(round(time.time())) + '.mp4'
 
     # Perspective projection factor
     PERSPECTIVE = 600
@@ -73,9 +73,9 @@ for _ in range(0,20):
             ],
             dimensions=[1, 5, 1],
             color=(
-                random.randint(0, 255),
-                random.randint(0, 255),
-                random.randint(0, 255)
+                255,
+                255,
+                255
             )
         ) for _ in range(NUM_CUBES)
     ]
