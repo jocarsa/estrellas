@@ -6,7 +6,7 @@ import time
 # Constants
 WIDTH, HEIGHT = 1920, 1080  # Reduced resolution for efficiency
 FPS = 60                    # Reduced FPS for testing
-DURATION = 60*60*1               # Shortened duration for testing (seconds)
+DURATION = 60*60*6               # Shortened duration for testing (seconds)
 NUM_CUBES = random.randint(500, 1000)  # Random number of cubes
 OUTPUT_FILE = f'starfield_screensaver_{round(time.time())}.mp4'
 

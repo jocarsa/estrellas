@@ -6,7 +6,7 @@ import time
 # Constants
 WIDTH, HEIGHT = 1920, 1080  # Reduced resolution for efficiency
 FPS = 60                    # Reduced FPS for testing
-DURATION = 60*60*1               # Shortened duration for testing (seconds)
+DURATION = 60*60*1          # Shortened duration for testing (seconds)
 NUM_CUBES = random.randint(500, 1000)  # Random number of cubes
 OUTPUT_FILE = f'starfield_screensaver_{round(time.time())}.mp4'
 
@@ -41,8 +41,8 @@ def project(vertices):
     projected = vertices[:, [0, 2]] * factors[:, None]
     return (projected + CENTER_FACTOR).astype(int)
 
-# Draw shape
-def draw_shape(frame, shape):
+# Draw shape with anti-aliasing
+def draw_shape(frame, shape, temp_buffer):
     vertices = shape.vertices()
     projected_vertices = project(vertices)
 
@@ -55,11 +55,14 @@ def draw_shape(frame, shape):
         ([0, 3, 7, 4], np.mean(vertices[[0, 3, 7, 4], 2])),
     ]
 
+    # Sort faces by depth for proper rendering
     faces.sort(key=lambda face: face[1], reverse=True)
 
     for face, _ in faces:
         pts = np.array([projected_vertices[i] for i in face], np.int32)
-        cv2.fillConvexPoly(frame, pts, shape.color)
+        pts = pts.reshape((-1, 1, 2))
+        # Use LINE_AA for anti-aliasing if possible
+        cv2.fillConvexPoly(temp_buffer, pts, shape.color, lineType=cv2.LINE_AA)
 
 # Generate shapes
 shapes = [
@@ -78,22 +81,40 @@ shapes = [
 fourcc = cv2.VideoWriter_fourcc(*'MP4V')
 out = cv2.VideoWriter(OUTPUT_FILE, fourcc, FPS, (WIDTH, HEIGHT))
 
+# Initialize frame buffer with black frame
+frame = np.zeros((HEIGHT, WIDTH, 3), dtype=np.uint8)
+
 # Simulation loop
 frames = int(FPS * DURATION)
 start_time = time.time()
 
 for frame_idx in range(frames):
-    frame = np.zeros((HEIGHT, WIDTH, 3), dtype=np.uint8)
+    # Step 1: Apply semi-transparent black overlay for motion blur
+    overlay = np.zeros_like(frame, dtype=np.uint8)
+    alpha = 0.95  # 95% of the previous frame remains
+    cv2.addWeighted(frame, alpha, overlay, 1 - alpha, 0, frame)
+
+    # Step 2: Create temporary buffer for new shapes
+    temp_buffer = np.zeros((HEIGHT, WIDTH, 3), dtype=np.uint8)
 
     # Sort shapes by Z-depth
     shapes.sort(key=lambda s: s.center[2], reverse=True)
 
     # Draw and update shapes
     for shape in shapes:
-        draw_shape(frame, shape)
+        draw_shape(frame, shape, temp_buffer)
+        # Update shape position (falling effect)
         shape.center[1] -= 4  # Fall speed
         if shape.center[1] < -HEIGHT // 2:
             shape.center[1] = random.uniform(1000, 1600)  # Reset position
+
+    # Step 3: Apply glow effect
+    # Blur the temp buffer to create glow
+    blurred = cv2.GaussianBlur(temp_buffer, (21, 21), sigmaX=0, sigmaY=0)
+    # Composite the blurred image with the temp buffer
+    glow = cv2.addWeighted(temp_buffer, 1.0, blurred, 0.5, 0)
+    # Add the glow to the main frame
+    cv2.add(frame, glow, frame)
 
     # Write frame to video
     out.write(frame)
@@ -102,7 +123,10 @@ for frame_idx in range(frames):
     if frame_idx % 60 == 0:
         elapsed_time = time.time() - start_time
         progress = (frame_idx / frames) * 100
-        time_remaining = (elapsed_time / (frame_idx + 1)) * (frames - frame_idx - 1)
+        if frame_idx > 0:
+            time_remaining = (elapsed_time / frame_idx) * (frames - frame_idx)
+        else:
+            time_remaining = 0
         print(
             f"Frame {frame_idx}/{frames} ({progress:.2f}% complete) - "
             f"Elapsed: {elapsed_time:.2f}s, Remaining: {time_remaining:.2f}s"
